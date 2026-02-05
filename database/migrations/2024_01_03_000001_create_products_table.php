@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('category_id')->nullable()->constrained();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->string('short_description', 255)->nullable();
             $table->text('description')->nullable();
             $table->string('brand', 100)->nullable();
             $table->decimal('base_price', 10, 2)->nullable();

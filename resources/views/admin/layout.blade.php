@@ -6,6 +6,7 @@
     <title>@yield('title', 'Admin Panel') - GenZ Wearables</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    @stack('styles')
     <style>
         .sidebar-link.active {
             background-color: #3b82f6;
