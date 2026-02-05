@@ -11,6 +11,8 @@ use App\Models\Size;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProductController extends Controller
 {
@@ -93,14 +95,19 @@ class ProductController extends Controller
     public function addImage(Request $request, Product $product)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
         ]);
 
-        $imagePath = $request->file('image')->store('products', 'public');
+        $uploaded = $request->file('image');
+        $manager = new ImageManager(new Driver());
+        $image = $manager->read($uploaded->getPathname());
+        $webp = $image->toWebp(80);
+        $filename = 'products/' . Str::uuid() . '.webp';
+        \Storage::disk('public')->put($filename, (string) $webp);
 
         ProductImage::create([
             'product_id' => $product->id,
-            'image' => $imagePath,
+            'image' => $filename,
             'is_primary' => $product->images()->count() === 0
         ]);
 
