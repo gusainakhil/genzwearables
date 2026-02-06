@@ -17,3 +17,6 @@ Route::get('/categories/{category}', [CategoryController::class, 'show']);
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/products/{product}/reviews', [ProductController::class, 'reviews']);
+
+Route::middleware('auth:sanctum')->post('/products/{product}/reviews', [ProductController::class, 'storeReview']);

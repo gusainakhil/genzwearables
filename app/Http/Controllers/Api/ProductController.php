@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Review;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -77,15 +78,76 @@ class ProductController extends Controller
             },
             'variants.size',
             'variants.color',
+            'reviews.user',
         ]);
 
         return response()->json([
             'status' => true,
-            'data' => $this->transformProduct($product, true),
+            'data' => $this->transformProduct($product, true, true),
         ]);
     }
 
-    private function transformProduct(Product $product, bool $includeVariants = false): array
+    public function reviews(Product $product)
+    {
+        if ($product->status !== 'active') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        $reviews = Review::with('user')
+            ->where('product_id', $product->id)
+            ->latest()
+            ->get()
+            ->map(function (Review $review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'user' => $review->user ? [
+                        'id' => $review->user->id,
+                        'name' => $review->user->name,
+                    ] : null,
+                    'created_at' => $review->created_at,
+                ];
+            });
+
+        return response()->json([
+            'status' => true,
+            'data' => $reviews,
+        ]);
+    }
+
+    public function storeReview(Request $request, Product $product)
+    {
+        if ($product->status !== 'active') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:2000',
+        ]);
+
+        $review = Review::create([
+            'product_id' => $product->id,
+            'user_id' => $request->user()->id,
+            'rating' => $validated['rating'],
+            'comment' => $validated['comment'] ?? null,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Review submitted',
+            'data' => $review,
+        ], 201);
+    }
+
+    private function transformProduct(Product $product, bool $includeVariants = false, bool $includeReviews = false): array
     {
         $images = $product->images->map(function ($image) {
             return [
@@ -122,6 +184,21 @@ class ProductController extends Controller
                     'status' => $variant->status,
                     'size' => $variant->size,
                     'color' => $variant->color,
+                ];
+            });
+        }
+
+        if ($includeReviews) {
+            $data['reviews'] = $product->reviews->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'user' => $review->user ? [
+                        'id' => $review->user->id,
+                        'name' => $review->user->name,
+                    ] : null,
+                    'created_at' => $review->created_at,
                 ];
             });
         }
